@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
+using UnityEngine;
 
 namespace Utils
 {
     
-    public class MinHeap<T> where T : IComparable
+    public class MinHeap<T> where T : IComparable, IEquatable<T>
     {
         private readonly T[] _elements;
         private int _size;
@@ -68,6 +70,19 @@ namespace Utils
             _size++;
 
             ReCalculateUp();
+        }
+
+        public bool Contains(T element)
+        {
+            for (var i = 0; i < _elements.Length; i++)
+            {
+                if ((_elements[i] as IEquatable<T>).Equals(element))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void ReCalculateDown()

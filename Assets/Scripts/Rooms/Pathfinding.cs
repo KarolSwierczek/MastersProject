@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEngine;
 using System;
 using Utils;
 
@@ -9,11 +8,11 @@ namespace Rooms
     {
         private readonly int _roomSizeX;
         private readonly int _roomSizeY;
-        private readonly int[] _room;
-        private MinHeap<Node> _openSet;
+        private readonly Node[] _room;
+        private readonly MinHeap<Node> _openSet;
 
 
-        public Pathfinding(int[] room, int roomSizeX, int roomSizeY)
+        public Pathfinding(Node[] room, int roomSizeX, int roomSizeY)
         {
             _room = room;
             _roomSizeX = roomSizeX;
@@ -22,55 +21,45 @@ namespace Rooms
             _openSet = new MinHeap<Node>(_room.Length);
         }
         
-        public List<Node> FindPath(int[][] graph, Node start, Node goal)
+        public IEnumerable<Node> FindPath(Node start, Node goal)
         {
+            _openSet.Add(start);
+            start.GScore = 0;
+            start.FScore = Heuristic(start, goal);
 
-            openSet[start] = true;
-            gScore[start] = 0;
-            fScore[start] = Heuristic(start, goal);
-
-            while (openSet.Count > 0)
+            while (!_openSet.IsEmpty())
             {
-                var current = nextBest();
+                var current = _openSet.Pop();
                 if (current.Equals(goal))
                 {
-                    return Reconstruct(current);
+                    return ReconstructPath(current);
                 }
 
-
-                openSet.Remove(current);
-                closedSet[current] = true;
-
-                foreach (var neighbor in Neighbors(graph, current))
+                foreach (var neighbor in GetNeighbors(current))
                 {
-                    if (closedSet.ContainsKey(neighbor))
-                        continue;
-
-                    var projectedG = getGScore(current) + 1;
-
-                    if (!openSet.ContainsKey(neighbor))
-                        openSet[neighbor] = true;
-                    else if (projectedG >= getGScore(neighbor))
-                        continue;
-
-                    //record it
-                    nodeLinks[neighbor] = current;
-                    gScore[neighbor] = projectedG;
-                    fScore[neighbor] = projectedG + Heuristic(neighbor, goal);
-
+                    var tentativeGScore = current.GScore + neighbor.Weight;
+                    if (tentativeGScore < neighbor.GScore)
+                    {
+                        neighbor.CameFrom = current;
+                        neighbor.GScore = tentativeGScore;
+                        neighbor.FScore = neighbor.GScore + Heuristic(neighbor, goal);
+                        if (!_openSet.Contains(neighbor))
+                        {
+                            _openSet.Add(neighbor);
+                        }
+                    }
                 }
             }
 
-
-            return new List<Vector2>();
+            throw new Exception("Cannot find a path from start to goal!");
         }
 
         private Node GetNodeAtCoordinates(int x, int y)
         {
-            throw new NotImplementedException();
+            return _room[x + _roomSizeX * y];
         }
 
-        private int Heuristic(Node start, Node goal)
+        private static int Heuristic(Node start, Node goal)
         {
             var dx = goal.X - start.X;
             var dy = goal.Y - start.Y;
@@ -79,46 +68,27 @@ namespace Rooms
 
         private IEnumerable<Node> GetNeighbors(Node node)
         {
-
-            Vector2 pt = new Vector2(center.X - 1, center.Y - 1);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-            pt = new Vector2(center.X, center.Y - 1);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-            pt = new Vector2(center.X + 1, center.Y - 1);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-            //middle row
-            pt = new Vector2(center.X - 1, center.Y);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-            pt = new Vector2(center.X + 1, center.Y);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-
-            //bottom row
-            pt = new Vector2(center.X - 1, center.Y + 1);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-            pt = new Vector2(center.X, center.Y + 1);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
-
-            pt = new Vector2(center.X + 1, center.Y + 1);
-            if (IsValidNeighbor(graph, pt))
-                yield return pt;
+            var x = node.X;
+            var y = node.Y;
             
+            for (var i = -1; i <= 1; i++)
+            {
+                for (var j = -1; j <= 1; j++)
+                {
+                    if(i == 0 && j == 0){continue;}
+                    if(!IsValidNeighbor(i + x, j + y)){continue;}
+
+                    yield return GetNodeAtCoordinates(i + x, j + y);
+                }
+            }
         }
 
         private bool IsValidNeighbor(int x, int y)
-        {
+        {            
+            if (_room == null)
+            {
+                throw new NullReferenceException("Trying to get a node, but the room is null!");
+            }
             if (x < 0 || x >= _room.Length)
             {
                 return false;
@@ -130,18 +100,16 @@ namespace Rooms
             return true;
         }
 
-        private List<Node> ReconstructPath(Node target)
+        private static IEnumerable<Node> ReconstructPath(Node target)
         {
             var current = target;
-            var path = new List<Node>();
             while (current.CameFrom != null)
             {
-                path.Add(current);
+                yield return current;
                 current = current.CameFrom;
             }
 
-            path.Reverse();
-            return path;
+            yield return current;
         }
     }
 }

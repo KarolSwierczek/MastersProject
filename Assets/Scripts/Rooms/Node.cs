@@ -2,7 +2,7 @@ using System;
 
 namespace Rooms
 {
-    public class Node : IComparable
+    public class Node : IComparable, IEquatable<Node>
     {
         public int X { get; }
         public int Y { get; }
@@ -28,6 +28,29 @@ namespace Rooms
                 throw new ArgumentException("object is not of type Node!");
             }
             return FScore.CompareTo(other.FScore);
+        }
+
+        public bool Equals(Node other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return X == other.X && Y == other.Y;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != typeof(Node)) return false;
+            return Equals((Node) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (X * 397) ^ Y;
+            }
         }
     }
 }
