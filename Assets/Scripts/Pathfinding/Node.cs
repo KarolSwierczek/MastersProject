@@ -1,13 +1,13 @@
 using System;
 
-namespace Rooms
+namespace Pathfinding
 {
     public class Node : IComparable, IEquatable<Node>
     {
         public int X { get; }
         public int Y { get; }
         public int Weight { get; }
-        
+
         public Node CameFrom { get; set; }
         public int GScore { get; set; }
         public int FScore { get; set; }
@@ -51,6 +51,16 @@ namespace Rooms
             {
                 return (X * 397) ^ Y;
             }
+        }
+
+        public static bool operator ==(Node left, Node right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Node left, Node right)
+        {
+            return !Equals(left, right);
         }
     }
 }

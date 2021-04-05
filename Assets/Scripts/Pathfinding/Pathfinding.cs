@@ -1,15 +1,14 @@
 using System.Collections.Generic;
 using System;
-using Utils;
 
-namespace Rooms
+namespace Pathfinding
 {
     public class Pathfinding
     {
         private readonly int _roomSizeX;
         private readonly int _roomSizeY;
         private readonly Node[] _room;
-        private readonly MinHeap<Node> _openSet;
+        private readonly OpenSet _openSet;
 
 
         public Pathfinding(Node[] room, int roomSizeX, int roomSizeY)
@@ -18,7 +17,7 @@ namespace Rooms
             _roomSizeX = roomSizeX;
             _roomSizeY = roomSizeY;
 
-            _openSet = new MinHeap<Node>(_room.Length);
+            _openSet = new OpenSet(_room.Length);
         }
         
         public IEnumerable<Node> FindPath(Node start, Node goal)
@@ -70,16 +69,22 @@ namespace Rooms
         {
             var x = node.X;
             var y = node.Y;
-            
-            for (var i = -1; i <= 1; i++)
-            {
-                for (var j = -1; j <= 1; j++)
-                {
-                    if(i == 0 && j == 0){continue;}
-                    if(!IsValidNeighbor(i + x, j + y)){continue;}
 
-                    yield return GetNodeAtCoordinates(i + x, j + y);
-                }
+            if (IsValidNeighbor(x + 1, y))
+            {
+                yield return GetNodeAtCoordinates(x + 1, y);
+            }
+            if (IsValidNeighbor(x -1, y))
+            {
+                yield return GetNodeAtCoordinates(x - 1, y);
+            }            
+            if (IsValidNeighbor(x, y + 1))
+            {
+                yield return GetNodeAtCoordinates(x, y + 1);
+            }            
+            if (IsValidNeighbor(x, y - 1))
+            {
+                yield return GetNodeAtCoordinates(x, y - 1);
             }
         }
 
@@ -89,11 +94,11 @@ namespace Rooms
             {
                 throw new NullReferenceException("Trying to get a node, but the room is null!");
             }
-            if (x < 0 || x >= _room.Length)
+            if (x < 0 || x >= _roomSizeX)
             {
                 return false;
             }
-            if (y < 0 || y >= _room.Length)
+            if (y < 0 || y >= _roomSizeY)
             {
                 return false;
             }

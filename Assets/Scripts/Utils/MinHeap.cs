@@ -1,18 +1,16 @@
 using System;
-using System.Linq;
-using UnityEngine;
 
 namespace Utils
 {
     
-    public class MinHeap<T> where T : IComparable, IEquatable<T>
+    public class MinHeap<T> where T : IComparable
     {
-        private readonly T[] _elements;
+        protected readonly T[] Elements;
         private int _size;
 
         public MinHeap(int size)
         {
-            _elements = new T[size];
+            Elements = new T[size];
         }
 
         private static int GetLeftChildIndex(int elementIndex) => 2 * elementIndex + 1;
@@ -23,15 +21,15 @@ namespace Utils
         private bool HasRightChild(int elementIndex) => GetRightChildIndex(elementIndex) < _size;
         private static bool IsRoot(int elementIndex) => elementIndex == 0;
 
-        private T GetLeftChild(int elementIndex) => _elements[GetLeftChildIndex(elementIndex)];
-        private T GetRightChild(int elementIndex) => _elements[GetRightChildIndex(elementIndex)];
-        private T GetParent(int elementIndex) => _elements[GetParentIndex(elementIndex)];
+        private T GetLeftChild(int elementIndex) => Elements[GetLeftChildIndex(elementIndex)];
+        private T GetRightChild(int elementIndex) => Elements[GetRightChildIndex(elementIndex)];
+        private T GetParent(int elementIndex) => Elements[GetParentIndex(elementIndex)];
 
         private void Swap(int firstIndex, int secondIndex)
         {
-            var temp = _elements[firstIndex];
-            _elements[firstIndex] = _elements[secondIndex];
-            _elements[secondIndex] = temp;
+            var temp = Elements[firstIndex];
+            Elements[firstIndex] = Elements[secondIndex];
+            Elements[secondIndex] = temp;
         }
 
         public bool IsEmpty()
@@ -44,7 +42,7 @@ namespace Utils
             if (_size == 0)
                 throw new IndexOutOfRangeException();
 
-            return _elements[0];
+            return Elements[0];
         }
 
         public T Pop()
@@ -52,8 +50,8 @@ namespace Utils
             if (_size == 0)
                 throw new IndexOutOfRangeException();
 
-            var result = _elements[0];
-            _elements[0] = _elements[_size - 1];
+            var result = Elements[0];
+            Elements[0] = Elements[_size - 1];
             _size--;
 
             ReCalculateDown();
@@ -63,27 +61,15 @@ namespace Utils
 
         public void Add(T element)
         {
-            if (_size == _elements.Length)
+            if (_size == Elements.Length)
                 throw new IndexOutOfRangeException();
 
-            _elements[_size] = element;
+            Elements[_size] = element;
             _size++;
 
             ReCalculateUp();
         }
-
-        public bool Contains(T element)
-        {
-            for (var i = 0; i < _elements.Length; i++)
-            {
-                if ((_elements[i] as IEquatable<T>).Equals(element))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        
 
         private void ReCalculateDown()
         {
@@ -96,7 +82,7 @@ namespace Utils
                     smallerIndex = GetRightChildIndex(index);
                 }
 
-                if (_elements[smallerIndex].CompareTo(_elements[index]) >= 0 )
+                if (Elements[smallerIndex].CompareTo(Elements[index]) >= 0 )
                 {
                     break;
                 }
@@ -109,7 +95,7 @@ namespace Utils
         private void ReCalculateUp()
         {
             var index = _size - 1;
-            while (!IsRoot(index) && _elements[index].CompareTo(GetParent(index)) < 0 )
+            while (!IsRoot(index) && Elements[index].CompareTo(GetParent(index)) < 0 )
             {
                 var parentIndex = GetParentIndex(index);
                 Swap(parentIndex, index);

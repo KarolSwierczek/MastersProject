@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using Data;
+using Pathfinding;
 using Random = UnityEngine.Random;
 
 namespace Rooms
@@ -13,9 +15,16 @@ namespace Rooms
         [SerializeField] private Transform _TileParent;
         [SerializeField] private LineRenderer _PathLine;
 
+        private readonly List<RoomTile> _spawnedTiles = new List<RoomTile>();
+
+        private const float _lineOffset = 1f;
+
         [Button]
         private void GenerateRoomAndPath()
         {
+            //Delete previous room
+            Reset();
+            
             //generate the room
             var roomSizeX = Random.Range(_Settings.MinRoomSizeX, _Settings.MaxRoomSizeX + 1);
             var roomSizeY = Random.Range(_Settings.MinRoomSizeY, _Settings.MaxRoomSizeY + 1);
@@ -33,8 +42,8 @@ namespace Rooms
             }
 
             //generate path
-            var pathfinding = new Pathfinding(room, roomSizeX, roomSizeY);
-            var startNodeIndex = roomSizeX * roomSizeY / 2 -1;
+            var pathfinding = new Pathfinding.Pathfinding(room, roomSizeX, roomSizeY);
+            var startNodeIndex = roomSizeX * (roomSizeY / 2);
             var goalNodeIndex = startNodeIndex + roomSizeX - 1;
 
             var path = pathfinding.FindPath(room[startNodeIndex], room[goalNodeIndex]);
@@ -43,16 +52,26 @@ namespace Rooms
             _PathLine.SetPositions(positions);
         }
 
+        private void Reset()
+        {
+            foreach (var tile in _spawnedTiles)
+            {
+                Destroy(tile.gameObject);
+            }
+            _spawnedTiles.Clear();
+        }
+
         private void SpawnRoomTile(Node node)
         {
             var position = new Vector3(node.X * _Settings.TileSize, 0f, node.Y * _Settings.TileSize);
             var tile = Instantiate(_TilePrefab, position, Quaternion.identity, _TileParent);
+            _spawnedTiles.Add(tile);
             tile.Weight = node.Weight;
         }
 
         private Vector3 GetTilePosition(Node node)
         {
-            return new Vector3(node.X * _Settings.TileSize, 0f, node.Y * _Settings.TileSize);
+            return new Vector3(node.X * _Settings.TileSize, _lineOffset, node.Y * _Settings.TileSize);
         }
     }
 }
