@@ -7,7 +7,7 @@ namespace Rooms.ObstacleGeneration
     {
         private static IObstacleGenerationMask _maskInstance;
 
-        public static int GetObstacleProbabilityOnTile(int tileIndex, ObstacleGenerationMaskType maskType, Vector2Int roomSize, int maxValue)
+        public static int GetObstacleProbabilityOnTile(int tileIndex, Vector2Int roomSize, ObstacleGenerationMaskType maskType, int maxValue)
         {
             if (_maskInstance == null || _maskInstance.MaskType != maskType)
             {
@@ -20,6 +20,16 @@ namespace Rooms.ObstacleGeneration
             }
 
             return _maskInstance.GetRoomTileWeight(tileIndex);
+        }
+
+        public static int GetObstacleProbabilityOnTile(int tileIndex, Vector2Int roomSize, Texture2D texture, int maxValue)
+        {
+            var tileCoordinateNormalizedX = (tileIndex % roomSize.x) / (float) roomSize.x;
+            var tileCoordinateNormalizedY = (tileIndex / roomSize.x) / (float) roomSize.y;
+            var textureCoordinateX = Mathf.RoundToInt(tileCoordinateNormalizedX * texture.width);
+            var textureCoordinateY = Mathf.RoundToInt(tileCoordinateNormalizedY * texture.height);
+            var pixelColor = texture.GetPixel(textureCoordinateX, textureCoordinateY);
+            return Mathf.RoundToInt(pixelColor.r * pixelColor.a * maxValue);
         }
 
         private static IObstacleGenerationMask GetMaskInstance(ObstacleGenerationMaskType maskType, Vector2Int roomSize, int maxValue)

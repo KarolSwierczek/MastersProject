@@ -6,8 +6,8 @@ namespace Pathfinding
     {
         public int X { get; }
         public int Y { get; }
-        public int Weight { get; }
-
+        
+        public int Weight { get; set; }
         public Node CameFrom { get; set; }
         public int GScore { get; set; }
         public int FScore { get; set; }
