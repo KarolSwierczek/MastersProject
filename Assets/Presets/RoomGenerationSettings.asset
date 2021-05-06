@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de239f2cfbea33847a166f30ca832485, type: 3}
   m_Name: RoomGenerationSettings
   m_EditorClassIdentifier: 
-  _MaxTileWeight: 4
-  _MinRoomSizeX: 10
-  _MaxRoomSizeX: 16
-  _MinRoomSizeY: 8
-  _MaxRoomSizeY: 12
+  _MaxTileWeight: 9
+  _MinRoomSizeX: 20
+  _MaxRoomSizeX: 24
+  _MinRoomSizeY: 20
+  _MaxRoomSizeY: 24
   _TileSize: 5
