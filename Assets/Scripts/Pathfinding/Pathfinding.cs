@@ -36,7 +36,7 @@ namespace Pathfinding
 
                 foreach (var neighbor in GetNeighbors(current))
                 {
-                    var tentativeGScore = current.GScore + neighbor.Weight;
+                    var tentativeGScore = current.GScore + neighbor.Weight * neighbor.Weight;
                     if (tentativeGScore < neighbor.GScore)
                     {
                         neighbor.CameFrom = current;
@@ -62,7 +62,7 @@ namespace Pathfinding
         {
             var dx = goal.X - start.X;
             var dy = goal.Y - start.Y;
-            return Math.Abs(dx) + Math.Abs(dy);
+            return Math.Abs(dx) + Math.Abs(dy) + start.Weight;
         }
 
         private IEnumerable<Node> GetNeighbors(Node node)
