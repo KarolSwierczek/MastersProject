@@ -8,7 +8,7 @@ namespace Utils
         protected readonly T[] Elements;
         private int _size;
 
-        public MinHeap(int size)
+        protected MinHeap(int size)
         {
             Elements = new T[size];
         }
@@ -73,7 +73,7 @@ namespace Utils
 
         private void ReCalculateDown()
         {
-            int index = 0;
+            var index = 0;
             while (HasLeftChild(index))
             {
                 var smallerIndex = GetLeftChildIndex(index);

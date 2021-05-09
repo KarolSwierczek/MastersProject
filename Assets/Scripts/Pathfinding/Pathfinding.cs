@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using System.Linq;
 
 namespace Pathfinding
 {
@@ -8,7 +9,8 @@ namespace Pathfinding
         private readonly int _roomSizeX;
         private readonly int _roomSizeY;
         private readonly Node[] _room;
-        private readonly OpenSet _openSet;
+        
+        private OpenSet _openSet;
 
 
         public Pathfinding(Node[] room, int roomSizeX, int roomSizeY)
@@ -20,8 +22,25 @@ namespace Pathfinding
             _openSet = new OpenSet(_room.Length);
         }
         
-        public IEnumerable<Node> FindPath(Node start, Node goal)
+        public IEnumerable<Node> FindPath(int[] nodeIndices)
         {
+            var path = new List<Node> {_room[nodeIndices[0]]};
+
+            for (var i = 0; i < nodeIndices.Length - 1; i++)
+            {
+                var partialPath = FindPath(nodeIndices[i], nodeIndices[i + 1]).Reverse();
+                path.AddRange(partialPath.Skip(1));
+                ResetPathfinding();
+            }
+
+            return path;
+        }
+        
+        public IEnumerable<Node> FindPath(int startIndex, int goalIndex)
+        {
+            var start = _room[startIndex];
+            var goal = _room[goalIndex];
+            
             _openSet.Add(start);
             start.GScore = 0;
             start.FScore = Heuristic(start, goal);
@@ -36,7 +55,7 @@ namespace Pathfinding
 
                 foreach (var neighbor in GetNeighbors(current))
                 {
-                    var tentativeGScore = current.GScore + neighbor.Weight * neighbor.Weight;
+                    var tentativeGScore = current.GScore + neighbor.Weight;
                     if (tentativeGScore < neighbor.GScore)
                     {
                         neighbor.CameFrom = current;
@@ -62,7 +81,7 @@ namespace Pathfinding
         {
             var dx = goal.X - start.X;
             var dy = goal.Y - start.Y;
-            return Math.Abs(dx) + Math.Abs(dy) + start.Weight;
+            return Math.Abs(dx) + Math.Abs(dy);
         }
 
         private IEnumerable<Node> GetNeighbors(Node node)
@@ -103,6 +122,18 @@ namespace Pathfinding
                 return false;
             }
             return true;
+        }
+
+        private void ResetPathfinding()
+        {
+            foreach (var node in _room)
+            {
+                node.FScore = int.MaxValue;
+                node.GScore = int.MaxValue;
+                node.CameFrom = null;
+            }
+            
+            _openSet = new OpenSet(_room.Length);
         }
 
         private static IEnumerable<Node> ReconstructPath(Node target)

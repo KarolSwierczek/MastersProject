@@ -5,6 +5,7 @@ using UnityEngine;
 using Data;
 using Pathfinding;
 using Rooms.ObstacleGeneration;
+using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 namespace Rooms
@@ -14,7 +15,8 @@ namespace Rooms
         [SerializeField] private RoomGenerationSettings _Settings;
         [SerializeField] private RoomTile _TilePrefab;
         [SerializeField] private Transform _TileParent;
-        [SerializeField] private LineRenderer _PathLine;
+        [FormerlySerializedAs("_PathLine")] 
+        [SerializeField] private LineRenderer _DebugPathLine;
 
         private readonly List<RoomTile> _spawnedTiles = new List<RoomTile>();
         private Node[] _room;
@@ -42,52 +44,51 @@ namespace Rooms
                     var weight = Random.Range(0, _Settings.MaxTileWeight + 1);
                     var node = new Node(i, j, weight);
                     _room[i + roomSizeX * j] = node;
-                    SpawnRoomTile(node);
+                    SpawnDebugRoomTile(node);
                 }
             }
 
             //generate path
             var pathfinding = new Pathfinding.Pathfinding(_room, roomSizeX, roomSizeY);
+            
             var startNodeIndex = roomSizeX * (roomSizeY / 2);
             var goalNodeIndex = startNodeIndex + roomSizeX - 1;
+            var nodeIndices = GetIndicesWithViaPoints(_Settings.RandomViaPointCount, 0, _room.Length,
+                startNodeIndex, goalNodeIndex);
 
-            _path = pathfinding.FindPath(_room[startNodeIndex], _room[goalNodeIndex]);
+            _path = pathfinding.FindPath(nodeIndices.ToArray());
             var positions = _path.Select(GetTilePosition).ToArray();
-            _PathLine.positionCount = positions.Length;
-            _PathLine.SetPositions(positions);
-            _PathLine.enabled = true;
+            _DebugPathLine.positionCount = positions.Length;
+            _DebugPathLine.SetPositions(positions);
+            _DebugPathLine.enabled = true;
         }
 
         [Button]
         private void GenerateObstacleWeights(ObstacleGenerationMaskType maskType)
         {
-            _PathLine.enabled = false;
+            _DebugPathLine.enabled = false;
             
             for(var i = 0; i < _room.Length; i++)
             {
-                _room[i].Weight =
-                    ObstacleGeneration.ObstacleGeneration.GetObstacleProbabilityOnTile(i, _roomSize, maskType,
-                        _Settings.MaxTileWeight);
+                _room[i].Weight = ObstacleProbabilityGeneration.GetObstacleProbabilityOnTile(i, _roomSize, maskType, _Settings.MaxTileWeight);
             }
 
             ZeroTilesOnPath();
-            UpdateTiles();
+            UpdateDebugTileWeights();
         }
         
         [Button]
         private void GenerateObstacleWeights(Texture2D texture)
         {
-            _PathLine.enabled = false;
+            _DebugPathLine.enabled = false;
             
             for(var i = 0; i < _room.Length; i++)
             {
-                _room[i].Weight =
-                    ObstacleGeneration.ObstacleGeneration.GetObstacleProbabilityOnTile(i, _roomSize, texture,
-                        _Settings.MaxTileWeight);
+                _room[i].Weight = ObstacleProbabilityGeneration.GetObstacleProbabilityOnTile(i, _roomSize, texture, _Settings.MaxTileWeight);
             }
             
             ZeroTilesOnPath();
-            UpdateTiles();
+            UpdateDebugTileWeights();
         }
 
         private void Reset()
@@ -99,7 +100,7 @@ namespace Rooms
             _spawnedTiles.Clear();
         }
 
-        private void SpawnRoomTile(Node node)
+        private void SpawnDebugRoomTile(Node node)
         {
             var position = new Vector3(node.X * _Settings.TileSize, 0f, node.Y * _Settings.TileSize);
             var tile = Instantiate(_TilePrefab, position, Quaternion.identity, _TileParent);
@@ -107,7 +108,7 @@ namespace Rooms
             tile.Weight = node.Weight;
         }
 
-        private void UpdateTiles()
+        private void UpdateDebugTileWeights()
         {
             for (var i = 0; i < _spawnedTiles.Count; i++)
             {
@@ -126,6 +127,24 @@ namespace Rooms
         private Vector3 GetTilePosition(Node node)
         {
             return new Vector3(node.X * _Settings.TileSize, _lineOffset, node.Y * _Settings.TileSize);
+        }
+        
+        //todo: move to utils
+        private static IEnumerable<int> GetIndicesWithViaPoints(int numOfViaPoints, int rangeStart, int rangeCount, int startIndex, int goalIndex)
+        {
+            var result = new List<int>{startIndex};
+            var availableIndices =
+                Enumerable.Range(rangeStart, rangeCount).Except(new[] {startIndex, goalIndex}).ToList();
+            
+            //shuffle availableIndices
+            for (var i = 0; i < availableIndices.Count; i++) {
+                var temp = availableIndices[i];
+                var randomIndex = Random.Range(i, availableIndices.Count);
+                availableIndices[i] = availableIndices[randomIndex];
+                availableIndices[randomIndex] = temp;
+            }
+            
+            return availableIndices.Take(numOfViaPoints).Prepend(startIndex).Append(goalIndex);
         }
     }
 }

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Rooms.ObstacleGeneration
 {
-    public static class ObstacleGeneration
+    public static class ObstacleProbabilityGeneration
     {
         private static IObstacleGenerationMask _maskInstance;
 
