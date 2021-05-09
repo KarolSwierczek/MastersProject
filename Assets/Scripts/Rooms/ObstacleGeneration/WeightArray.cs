@@ -48,14 +48,20 @@ namespace Rooms.ObstacleGeneration
 
         public void UpdateWeight(int index, int weight)
         {
-            var difference = weight - _weights[index];
+            var previousValue = _weights[index];
+            if (index - 1 >= 0)
+            {
+                previousValue -= _weights[index - 1];
+            }
+
+            var difference = weight - previousValue;
             
             for (var i = index; i < _weights.Length; i++)
             {
-                _weights[i] -= difference;
+                _weights[i] += difference;
             }
 
-            _sumOfWeights -= difference;
+            _sumOfWeights += difference;
         }
     }
 }

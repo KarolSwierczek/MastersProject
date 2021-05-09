@@ -3,13 +3,16 @@ using System.Linq;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using Data;
+using Difficulty;
 using Pathfinding;
 using Rooms.ObstacleGeneration;
 using UnityEngine.Serialization;
+using Zenject;
 using Random = UnityEngine.Random;
 
 namespace Rooms
 {
+    //todo: move some methods to room generation class
     public class Room : MonoBehaviour
     {
         [SerializeField] private RoomGenerationSettings _Settings;
@@ -17,6 +20,8 @@ namespace Rooms
         [SerializeField] private Transform _TileParent;
         [FormerlySerializedAs("_PathLine")] 
         [SerializeField] private LineRenderer _DebugPathLine;
+
+        [Inject] private readonly IDifficultySystem _difficultySystem;
 
         private readonly List<RoomTile> _spawnedTiles = new List<RoomTile>();
         private Node[] _room;
@@ -89,6 +94,30 @@ namespace Rooms
             
             ZeroTilesOnPath();
             UpdateDebugTileWeights();
+        }
+
+        [Button]
+        private void GenerateObstacles()
+        {
+            //todo: apply scattered/clumped mask after each element is spawned
+            //todo: reset changes from masks after each tile type (to avoid clumping between different tile types)
+            var tileWeights = new WeightArray(_room);
+
+            GenerateObstaclesOfType(TileType.Column, tileWeights);
+            GenerateObstaclesOfType(TileType.Box, tileWeights);
+            GenerateObstaclesOfType(TileType.Spikes, tileWeights);
+        }
+
+        private void GenerateObstaclesOfType(TileType type, WeightArray tileWeights)
+        {
+            var numOfObstacles = _difficultySystem.GetNumberOfTiles(type, _room.Length);
+            for (var i = 0; i < numOfObstacles; i++)
+            {
+                var obstacleIndex = tileWeights.GetRandomWeightedIndex();
+                _spawnedTiles[obstacleIndex].Weight = 0;
+                _spawnedTiles[obstacleIndex].Type = type;
+                tileWeights.UpdateWeight(obstacleIndex, 0);
+            }
         }
 
         private void Reset()

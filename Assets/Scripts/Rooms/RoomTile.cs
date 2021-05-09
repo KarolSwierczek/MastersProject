@@ -1,7 +1,6 @@
 using TMPro;
 using UnityEngine;
 using Data;
-using UnityEngine.Serialization;
 
 namespace Rooms
 {
@@ -13,7 +12,7 @@ namespace Rooms
             set
             {
                 _weight = value;
-                _TypeText.SetText(_weight.ToString());
+                _Label.SetText(value.ToString());
                 _Renderer.material.color = GetColorFromWeight(_weight);
             }
         }
@@ -24,12 +23,12 @@ namespace Rooms
             set
             {
                 _type = value;
-                _TypeText.SetText(value.ToString());
+                _Label.SetText(value.ToString().Substring(0, 1));
+                _Renderer.material.color = Color.grey;
             } 
         }
         
-        [FormerlySerializedAs("_WeightText")] 
-        [SerializeField] private TextMeshPro _TypeText;
+        [SerializeField] private TextMeshPro _Label;
         [SerializeField] private MeshRenderer _Renderer;
         [SerializeField] private RoomGenerationSettings _Settings;
         [SerializeField] private Gradient _WeightColorScale;
