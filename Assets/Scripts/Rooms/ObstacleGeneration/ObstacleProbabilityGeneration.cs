@@ -9,6 +9,10 @@ namespace Rooms.ObstacleGeneration
 
         public static int GetObstacleProbabilityOnTile(int tileIndex, Vector2Int roomSize, ObstacleGenerationMaskType maskType, int maxValue)
         {
+            if (maskType == ObstacleGenerationMaskType.None)
+            {
+                return maxValue;
+            }
             if (_maskInstance == null || _maskInstance.MaskType != maskType)
             {
                 _maskInstance = GetMaskInstance(maskType, roomSize, maxValue);

@@ -15,7 +15,10 @@ namespace Rooms
     //todo: move some methods to room generation class
     public class Room : MonoBehaviour
     {
-        [SerializeField] private RoomGenerationSettings _Settings;
+        //todo: move to room spawner and game loop preset
+        [SerializeField] private RoomGenerationSettings _GenerationSettings;
+        [SerializeField] private RoomSettings _Settings;
+        
         [SerializeField] private RoomTile _TilePrefab;
         [SerializeField] private Transform _TileParent;
         [FormerlySerializedAs("_PathLine")] 
@@ -27,6 +30,9 @@ namespace Rooms
         private Node[] _room;
         private IEnumerable<Node> _path;
         private Vector2Int _roomSize;
+        
+        private WeightArray _debugWeightArray;
+        private bool _isDebugWeightArrayInitialized;
 
         private const float _lineOffset = 1f;
 
@@ -46,7 +52,7 @@ namespace Rooms
             {
                 for (var i = 0; i < roomSizeX; i++)
                 {
-                    var weight = Random.Range(0, _Settings.MaxTileWeight + 1);
+                    var weight = Random.Range(0, _GenerationSettings.MaxTileWeight + 1);
                     var node = new Node(i, j, weight);
                     _room[i + roomSizeX * j] = node;
                     SpawnDebugRoomTile(node);
@@ -58,7 +64,7 @@ namespace Rooms
             
             var startNodeIndex = roomSizeX * (roomSizeY / 2);
             var goalNodeIndex = startNodeIndex + roomSizeX - 1;
-            var nodeIndices = GetIndicesWithViaPoints(_Settings.RandomViaPointCount, 0, _room.Length,
+            var nodeIndices = GetIndicesWithViaPoints(_GenerationSettings.RandomViaPointCount, 0, _room.Length,
                 startNodeIndex, goalNodeIndex);
 
             _path = pathfinding.FindPath(nodeIndices.ToArray());
@@ -69,27 +75,24 @@ namespace Rooms
         }
 
         [Button]
-        private void GenerateObstacleWeights(ObstacleGenerationMaskType maskType)
+        private void GenerateObstacleWeights()
         {
             _DebugPathLine.enabled = false;
-            
-            for(var i = 0; i < _room.Length; i++)
+            if (_Settings.UseTextureAsMask)
             {
-                _room[i].Weight = ObstacleProbabilityGeneration.GetObstacleProbabilityOnTile(i, _roomSize, maskType, _Settings.MaxTileWeight);
+                var texture = _Settings.TextureMask;
+                for(var i = 0; i < _room.Length; i++)
+                {
+                    _room[i].Weight = ObstacleProbabilityGeneration.GetObstacleProbabilityOnTile(i, _roomSize, texture, _GenerationSettings.MaxTileWeight);
+                }
             }
-
-            ZeroTilesOnPath();
-            UpdateDebugTileWeights();
-        }
-        
-        [Button]
-        private void GenerateObstacleWeights(Texture2D texture)
-        {
-            _DebugPathLine.enabled = false;
-            
-            for(var i = 0; i < _room.Length; i++)
+            else
             {
-                _room[i].Weight = ObstacleProbabilityGeneration.GetObstacleProbabilityOnTile(i, _roomSize, texture, _Settings.MaxTileWeight);
+                var maskType = _Settings.MaskType;
+                for(var i = 0; i < _room.Length; i++)
+                {
+                    _room[i].Weight = ObstacleProbabilityGeneration.GetObstacleProbabilityOnTile(i, _roomSize, maskType, _GenerationSettings.MaxTileWeight);
+                }
             }
             
             ZeroTilesOnPath();
@@ -99,24 +102,66 @@ namespace Rooms
         [Button]
         private void GenerateObstacles()
         {
-            //todo: apply scattered/clumped mask after each element is spawned
-            //todo: reset changes from masks after each tile type (to avoid clumping between different tile types)
-            var tileWeights = new WeightArray(_room);
-
-            GenerateObstaclesOfType(TileType.Column, tileWeights);
-            GenerateObstaclesOfType(TileType.Box, tileWeights);
-            GenerateObstaclesOfType(TileType.Spikes, tileWeights);
+            var groupingType = _Settings.GroupingMaskType;
+            
+            GenerateObstaclesOfType(TileType.Column, groupingType);
+            GenerateObstaclesOfType(TileType.Box, groupingType);
+            GenerateObstaclesOfType(TileType.Spikes, groupingType);
+            
+            UpdateDebugTileWeights();
         }
 
-        private void GenerateObstaclesOfType(TileType type, WeightArray tileWeights)
+        [Button]
+        private void GenerateSingleObstacle(TileType tileType)
         {
+            if (tileType == TileType.Floor)
+            {
+                Debug.LogError($"Cannot generate obstacle of type: {tileType}");
+                return;
+            }
+
+            if (!_isDebugWeightArrayInitialized)
+            {
+                _debugWeightArray = new WeightArray(_room);
+                _isDebugWeightArrayInitialized = true;
+            }
+            
+            var groupingType = _Settings.GroupingMaskType;
+            var obstacleIndex = _debugWeightArray.GetRandomWeightedIndex();
+            _room[obstacleIndex].Weight = 0;
+            _spawnedTiles[obstacleIndex].Weight = 0;
+            _spawnedTiles[obstacleIndex].Type = tileType;
+            _debugWeightArray.UpdateWeight(obstacleIndex, 0);
+            ApplyGroupingMask(_debugWeightArray, groupingType, _roomSize, obstacleIndex, true);
+        }
+
+        private void GenerateObstaclesOfType(TileType type, ObstacleGroupingMaskType groupingType)
+        {
+            var tileWeights = new WeightArray(_room);
             var numOfObstacles = _difficultySystem.GetNumberOfTiles(type, _room.Length);
             for (var i = 0; i < numOfObstacles; i++)
             {
                 var obstacleIndex = tileWeights.GetRandomWeightedIndex();
+                _room[obstacleIndex].Weight = 0;
                 _spawnedTiles[obstacleIndex].Weight = 0;
                 _spawnedTiles[obstacleIndex].Type = type;
                 tileWeights.UpdateWeight(obstacleIndex, 0);
+                ApplyGroupingMask(tileWeights, groupingType, _roomSize, obstacleIndex);
+            }
+        }
+
+        private void ApplyGroupingMask(WeightArray tileWeights, ObstacleGroupingMaskType groupingType,
+            Vector2Int roomSize, int obstacleTileIndex, bool showChangesToDebugTiles = false)
+        {
+            var affectedTileWeightModifiers = ObstacleGrouping.GetAffectedTileIndices(obstacleTileIndex, roomSize, groupingType);
+            foreach (var affectedTile in affectedTileWeightModifiers)
+            {
+                var modifiedWeight = (int)(_room[affectedTile.Key].Weight * affectedTile.Value);
+                tileWeights.UpdateWeight(affectedTile.Key, modifiedWeight);
+                if (showChangesToDebugTiles)
+                {
+                    _spawnedTiles[affectedTile.Key].Weight = modifiedWeight;
+                }
             }
         }
 
@@ -131,7 +176,7 @@ namespace Rooms
 
         private void SpawnDebugRoomTile(Node node)
         {
-            var position = new Vector3(node.X * _Settings.TileSize, 0f, node.Y * _Settings.TileSize);
+            var position = new Vector3(node.X * _GenerationSettings.TileSize, 0f, node.Y * _GenerationSettings.TileSize);
             var tile = Instantiate(_TilePrefab, position, Quaternion.identity, _TileParent);
             _spawnedTiles.Add(tile);
             tile.Weight = node.Weight;
@@ -155,7 +200,7 @@ namespace Rooms
 
         private Vector3 GetTilePosition(Node node)
         {
-            return new Vector3(node.X * _Settings.TileSize, _lineOffset, node.Y * _Settings.TileSize);
+            return new Vector3(node.X * _GenerationSettings.TileSize, _lineOffset, node.Y * _GenerationSettings.TileSize);
         }
         
         //todo: move to utils

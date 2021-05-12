@@ -54,9 +54,11 @@ namespace Rooms.ObstacleGeneration
             MaxValue = maxValue;
             ReferencePosition = new Vector2(roomSize.x / 2f, roomSize.y / 2f);
             MaxHeuristicPosition = ReferencePosition;
-
-            var cornerPosition = Vector2.one * 0.5f;
-            _maxDistanceFromCenter = Vector2.Distance(cornerPosition, ReferencePosition);
+            
+            var edgePosition = roomSize.x > roomSize.y
+                ? new Vector2(0.5f, roomSize.y / 2f)
+                : new Vector2(roomSize.x / 2f, 0.5f);
+            _maxDistanceFromCenter = Vector2.Distance(edgePosition, ReferencePosition);
             
             MaxHeuresticValue = Heurestic(MaxHeuristicPosition);
         }
@@ -93,8 +95,8 @@ namespace Rooms.ObstacleGeneration
             ReferencePosition = new Vector2(roomSize.x / 2f, roomSize.y / 2f);
             MaxHeuristicPosition = ReferencePosition;
 
-            var cornerPosition = Vector2.one * 0.5f;
-            _maxDistanceFromCenter = Vector2.Distance(cornerPosition, ReferencePosition);
+            var edgePosition = new Vector2(0.5f, roomSize.y / 2f);
+            _maxDistanceFromCenter = Vector2.Distance(edgePosition, ReferencePosition);
             
             MaxHeuresticValue = Heurestic(MaxHeuristicPosition);
         }
@@ -163,7 +165,9 @@ namespace Rooms.ObstacleGeneration
             MaxHeuristicPosition = ReferencePosition;
 
             var cornerPosition = Vector2.one * 0.5f;
-            _maxDistanceFromCross = Vector2.Distance(cornerPosition, ReferencePosition);
+            _maxDistanceFromCross = Mathf.Min(
+                Mathf.Abs(ReferencePosition.x - cornerPosition.x),
+                Mathf.Abs(ReferencePosition.y - cornerPosition.y));
             
             MaxHeuresticValue = Heurestic(MaxHeuristicPosition);
         }
@@ -173,18 +177,21 @@ namespace Rooms.ObstacleGeneration
     {
         protected override ObstacleGenerationMaskType MaskType => ObstacleGenerationMaskType.Corners;
 
+        private Vector2 _lowerLeftCorner;
+        private Vector2 _lowerRightCorner;
+        private Vector2 _upperLeftCorner;
+        private Vector2 _upperRightCorner;
+        private float _distanceToCenter;
+
         protected override float Heurestic(Vector2 tilePosition)
         {
-            var lowerLeftCorner = Vector2.one * 0.5f;
-            var lowerRightCorner = new Vector2(RoomSize.x - 1f, 0f) + lowerLeftCorner;
-            var upperLeftCorner  = new Vector2(0f, RoomSize.y - 1f) + lowerLeftCorner;
-            var upperRightCorner = new Vector2(RoomSize.x - 1f, 0f) + lowerRightCorner;
+            var distanceToNearestCorner  = Mathf.Min(
+                Vector2.Distance(_lowerLeftCorner, tilePosition), 
+                Vector2.Distance(_lowerRightCorner, tilePosition), 
+                Vector2.Distance(_upperLeftCorner, tilePosition), 
+                Vector2.Distance(_upperRightCorner, tilePosition));
 
-            return Mathf.Max(
-                Vector2.Distance(lowerLeftCorner, tilePosition), 
-                Vector2.Distance(lowerRightCorner, tilePosition), 
-                Vector2.Distance(upperLeftCorner, tilePosition), 
-                Vector2.Distance(upperRightCorner, tilePosition));
+            return 1 - (distanceToNearestCorner / _distanceToCenter);
         }
 
         protected override void InitializeMask(Vector2Int roomSize, int maxValue)
@@ -193,6 +200,13 @@ namespace Rooms.ObstacleGeneration
             MaxValue = maxValue;
             MaxHeuristicPosition = Vector2.one * 0.5f;
 
+            _lowerLeftCorner = Vector2.one * 0.5f;
+            _lowerRightCorner = new Vector2(RoomSize.x - 0.5f, 0.5f);
+            _upperLeftCorner = new Vector2(0.5f, RoomSize.y - 0.5f);
+            _upperRightCorner = new Vector2(RoomSize.x - 0.5f, RoomSize.y - 0.5f);
+
+            _distanceToCenter = Vector2.Distance(_lowerLeftCorner, new Vector2(roomSize.x / 2f, roomSize.y / 2f));
+            
             MaxHeuresticValue = Heurestic(MaxHeuristicPosition);
         }
     }

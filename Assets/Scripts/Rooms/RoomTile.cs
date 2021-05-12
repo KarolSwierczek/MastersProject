@@ -11,6 +11,10 @@ namespace Rooms
             get => _weight;
             set
             {
+                if (_type != TileType.Floor)
+                {
+                    return;
+                }
                 _weight = value;
                 _Label.SetText(value.ToString());
                 _Renderer.material.color = GetColorFromWeight(_weight);
